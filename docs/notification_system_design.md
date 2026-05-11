@@ -595,3 +595,136 @@ Using:
 - real-time communication
 - optimized queries
 can  significantly improve both system performance and UX while reducing traffic on the database 
+
+----
+
+
+# STAGE 5.
+
+The current implementation processes notifications sequentially for every student.
+```python
+for student_id in student_ids:
+    send_email(student_id, message)
+    save_to_db(student_id, message)
+    push_to_app(student_id, message)
+```
+
+works for small data but not when you have to send for 50K students all together.
+
+# Problems in Current Implementation
+
+## 1. Sequential Processing
+
+Each operation is executed one after another.
+
+This significantly increases total processing time for large notification batches.
+
+---
+
+## 2. Third Party dependency
+
+Since SMTP or any other third party api would be used : 
+unreliable
+can timeout
+server error.
+
+affects the whole notification flow.
+
+## 3. No retry mechanism
+If email delivery fails midway, notifications may never reach some students.
+The current implementation has no retry handling.
+
+----
+
+
+# RECOMMENDED DESIGN 
+
+The notification system should always be a asynchronous job since an email taking a large amount of time can slow down/starve the other emails which is bad performance.
+
+# Worflow
+
+```
+    HR click 'SEND ALL"
+    - >
+    Notification data saved to DB
+    - >
+    Notification jobs added to a queue
+    - >
+    Worker would process the job asynchronously
+    - >
+    Email sent + real time notification(socket.io)
+```
+---
+
+# DB FIRST?
+
+Since DB is the main storage, source of TRUTH :
+if you send the email first and it fails to send , it is lost forever even if you try to retry and send it back , since it was never stored inside the DB ,you cannot find it .
+
+# QUEUE system
+
+Workers process the jobs that is sending emails, pushing them to the queue,and the emails which fail are pushed back to the queue.
+more the workers more jobs/emails are done simultaneously/
+
+# Benefits of Queue System
+
+- Faster API response
+- Better scalability
+- Retry support
+
+# Retry Mechanism
+
+Failed email jobs should automatically retry after a delay.
+
+Example:
+- retry after 30 seconds
+- maximum 3 retry attempts
+
+
+# Revised Pseudocode
+
+
+```python
+function notfiy_all(student_ids, message):
+
+    for student_id in student_ids:
+
+        save_to_db(student_id, message)
+
+        add_job_to_queue({
+            student_id,
+            message
+        }) 
+    worker_process(job):
+            try:
+                send_email(job.student_id, job.message)
+
+                push_to_app(job.student_id, job.message)
+
+            except Exception:
+                retry_job(job)
+
+```
+
+# Should DB Save and Email Sending Happen Together?
+
+No, they should be separated.
+
+Reason:
+- Database operations are critical
+- Email delivery is asynchronous and unreliable
+
+Separating them improves:
+- reliability
+- fault tolerance
+
+
+---
+
+The original implementation is slow and unreliable for large-scale notification delivery.
+
+Using:
+- asynchronous queues
+- background workers
+- retries
+creates a more scalable and fault-tolerant notification system.
