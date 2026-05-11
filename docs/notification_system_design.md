@@ -388,3 +388,129 @@ The proposed PostgreSQL schema provides:
 - support for future scaling strategies
 
 The schema is designed to work efficiently overall.
+
+
+
+
+# STAGE-3
+
+Query Optimization and Performance
+
+According to the scenario-
+the database contains :
+-50,000 students,
+-50,00,000 notifications.
+
+which is a huge amount of data.
+
+The following query is being used to fetch unread notifications:
+
+```sql
+SELECT * FROM notifications
+WHERE student_id = 1042
+AND is_read = FALSE
+ORDER BY created_at ASC;
+```
+
+Lets answer each question systematically-
+
+# IS IT ACCURATE?
+Technically YES, the query would fetch the unread notifications ordered by creation time.
+BUT, this query is not optimized .
+
+# WHY IS IT SLOW?
+Since the data is so large , with so many rows , after the query hits-
+
+There will be a full table scan that is O(N) where N being the number of rows in the database, since, there is no indexing .
+- Expensive.
+
+# COST
+Since ,the query mentions sorting in ASC , even sorting a large db is very costly.
+
+# LIMIT
+There is not limit clause , 
+if a student has many unread notifications , all of them will be fetched will will increase the cost , and increase the response time .
+
+# SELECT * 
+He did select * , basically checking every columns in the notifications table , some could have been un necessary
+
+ Optimized Query
+
+```sql
+SELECT id, type, message, created_at
+FROM notifications
+WHERE student_id = 1042
+AND is_read = FALSE
+ORDER BY created_at DESC
+LIMIT 20
+```
+
+# BETTER HOW?
+Improvements:
+- Fetches only required columns
+- Limits response size
+- Better API response time
+
+
+
+A composite index can significantly improve this query.
+
+```sql
+CREATE INDEX idx_notifications_student_read_created
+ON notifications(student_id, is_read, created_at DESC);
+```
+
+---
+
+# Why This Index Helps
+
+The query:
+- filters using `student_id`
+- filters using `is_read`
+- sorts using `created_at`
+
+# Computational Cost
+
+Without indexes:
+- Time complexity is close to O(n)
+- Database scan millions of rows
+
+With proper composite indexing:
+- Query performance improves significantly
+- Matching rows can be found much faster using index traversal
+
+---
+
+
+# should indexes be added at every columns ?
+
+No, adding at each column is bad .
+
+Although indexing reduces the time complexity it has fair trade-off: 
+
+- Indexes consume addition disc space.
+- whenever a new row ./data is added to the DB , it would be added to the columns and their respective indexes as well 
+- In this case, since notification has to be send to many users at once , so it needs to be faster and if indexing is at every column then it will be very slow as creation and updation time will increase.
+
+
+# Better way for indexing-
+
+- should be added to columns which are frequently used .
+- sorting /join columns
+
+# Query to Find Students Who Received Placement Notifications in Last 7 Days
+
+```sql
+SELECT DISTINCT student_id
+FROM notifications
+WHERE notificationType = 'Placement'
+AND created_at >= NOW() - INTERVAL '7 days';
+```
+
+(my schema contained 'type' as column)
+
+# Additional improvements :
+Redis caching
+pagination
+
+
