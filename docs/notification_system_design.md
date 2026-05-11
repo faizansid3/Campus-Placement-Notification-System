@@ -728,3 +728,32 @@ Using:
 - background workers
 - retries
 creates a more scalable and fault-tolerant notification system.
+
+
+
+----
+
+
+# STAGE 6.
+
+on mock data
+
+![RESULT -PRIORITY QUEUE (MIN HEAP)](image.png)
+
+
+To implement the Priority Inbox feature, notifications were ranked based on:
+
+- Notification type weight
+  - Placement > Result > Event
+- Recency of the notification
+
+A Min Heap (Priority Queue) of fixed size 10 was used to efficiently maintain only the top priority unread notifications instead of sorting the complete dataset repeatedly.
+
+### Priority Logic
+
+```js
+Placement = 3
+Result = 2
+Event = 1
+
+
