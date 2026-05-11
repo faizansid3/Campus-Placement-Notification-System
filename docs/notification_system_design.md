@@ -339,7 +339,8 @@ This reduces repeated database reads.
 SELECT *
 FROM notifications
 WHERE student_id = 1042
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT 10;
 ```
 
 
@@ -350,7 +351,8 @@ SELECT *
 FROM notifications
 WHERE student_id = 1042
 AND is_read = FALSE
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT 5;
 ```
 
 
