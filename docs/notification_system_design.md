@@ -390,7 +390,7 @@ The proposed PostgreSQL schema provides:
 The schema is designed to work efficiently overall.
 
 
-
+---
 
 # STAGE-3
 
@@ -513,4 +513,85 @@ AND created_at >= NOW() - INTERVAL '7 days';
 Redis caching
 pagination
 
+--- 
 
+# STAGE 4.
+DB optimization strategies
+
+# THE PROBLEM :
+this is a very common problem, while building the MVP the website or system being basic always has this which is that on every frontend api call to fetch notification ,it asks the DB and displays and on refresh it again asks the server or DB
+
+- bad response time
+- server load(since many users can be active and maybe refershing at the same time)
+- heavy traffic 
+- BAD UX
+
+# SOLUTIONS- 
+
+# (PAGINATION)
+- A very simple user experience friendly optimization is PAGINATION, it would not fetch all the x many records from the DB, only the what the limit is given for example -10 on page=1.
+(basically in batches because the user does not want to see all the notifications at once right.)
+
+-Faster API response
+-Reduce db query size
+-better UX as faster frontend response
+
+# TRADE-OFFS :
+- it gets slower if the page number increases basically if the page=10000 and you set the LIMIT to 10, still it will find and count till 10000th row just to get the 10001st row , increasing query time.
+
+# Real time notification using SOCKET.IO
+
+- instead of constant polling to check for updates , socket.io is used so that whenever there are updates in DB, it automatically renders them .
+# Trade-off
+Maintaining persistent socket connections increases backend complexity and memory usage.
+
+
+# REDIS Caching
+
+Caching  - used to cache or locally store the frequently accessed data so that the frontend does not have to request the DB(server) everytime.
+
+for eg:- 
+-latest notifications.
+-unread count.
+-tracking if user is logged-in
+
+- Faster response times
+- Reduces database load
+
+# trade-off
+everytime you update something inside your DB , it has to be updated inside the REDIS as well because RACE conditions can happen.Basically keeping them in sync, writing twice : once in DB and once in Redis is a little complex 
+
+
+# Laze Loading :
+Notifications should be loaded only when user scrolls to the botttom, basicallt when needed instead of rendering large data immediately.
+
+- Reduces frontend rendering overhead
+- Smaller API responses
+
+# Tradeoff
+
+implementation is kind of complex.
+
+
+# 5. Database Index Optimization
+
+Proper indexes should continue to be maintained on:
+- student_id
+- is_read
+
+This improves notification retrieval speed.
+
+### Tradeoff
+
+Additional indexes increase storage usage and slightly slow down insert operations.
+
+---
+
+# CONCLUSION
+
+Using:
+- caching
+- pagination
+- real-time communication
+- optimized queries
+can  significantly improve both system performance and UX while reducing traffic on the database 
